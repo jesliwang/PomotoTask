@@ -1,7 +1,10 @@
 import angular from 'angular';
 import angularMeteor from 'angular-meteor';
+import {Meteor} from 'meteor/meteor';
 
-import {Tasks} from '../../api/tasks.js'
+import {Tasks} from '../../api/tasks.js';
+import {Tomatos} from '../../api/tomatos.js';
+//import {Users} from '../../api/users.js';
 
 import template from './todosList.html';
 
@@ -10,19 +13,21 @@ class TodosListCtrl {
   constructor($scope) {
     $scope.viewModel(this);
 
-    this.hideCompleted = false;
-
     this.helpers({
       tasks(){
+        this.tomato = Tomatos.findOne({
+          owner:{
+            $eq:Meteor.userId()
+          }
+        });
+        this.onPomoto = (this.tomato != null);
 
-        const selector = {}
-
-        if(this.getReactively('hideCompleted')){
-          selector.checked = {
-            $ne:true
-          };
+        const selector = {
         }
 
+        selector.owner = {
+          $eq:Meteor.userId()
+        };
 
         return Tasks.find(selector, {
           sort: {
@@ -31,36 +36,62 @@ class TodosListCtrl {
         });
 
       },
-      incompleteCount(){
-        return Tasks.find({
-          checked :{
-            $ne : true
-          }
-        }).count();
+
+      currentUser(){
+        return Meteor.user();
+      },
+
+      showtomato(){
+        return this.onPomoto;
       }
     })
   }
 
   addTask(newTask){
-    Tasks.insert({
-      text: newTask,
-      createdAt: new Date
+    Meteor.call("task.insert", newTask, function(error, result){
+      if(error){
+        console.log("error", error);
+      }
+      if(result){
+
+      }
     });
 
     this.newTask = '';
   }
 
   setChecked(task){
-    Tasks.update(task._id, {$set:{
-      checked: !task.checked
-    }});
-
+    Meteor.call("tasks.setChecked", task._id, !task.checked);
   }
 
   removeTask(task){
-    Tasks.remove(task._id);
+    Meteor.call("task.remove", task._id);
+  }
+
+  tomatoTick(){
+    if(this.onPomoto){
+      this.tomatoLeft = 25
+    }
+  }
+
+  startpomoto(task){
+    if(this.onPomoto){
+
+    }
+    else {
+      Meteor.call("tomatos.add", task._id);
+
+      this.tomato = Tomatos.findOne({
+        owner:{
+          $eq:Meteor.userId()
+        }
+      });
+
+      this.onPomoto = this.tomato != null;
+    }
 
   }
+
 }
 
 export default angular.module('todosList', [
